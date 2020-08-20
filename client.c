@@ -21,7 +21,7 @@ int push_msg(const char *socket_path, int id, char *payload) {
   msg->next = NULL;
 
   int fd;
-  int i, n;
+  int ret = 0;
   size_t len;
   struct sockaddr_un un;
 
@@ -31,18 +31,24 @@ int push_msg(const char *socket_path, int id, char *payload) {
   un.sun_family = AF_UNIX;
   strcpy(un.sun_path, socket_path);
   len = offsetof(struct sockaddr_un, sun_path) + strlen(socket_path);
-  if (connect(fd, (struct sockaddr *)&un, len) == -1) {
-    perror("connect");
-    return 1;
-  }
 
-  if(write(fd, (void*)msg, sizeof(message_t)) != sizeof(message_t)) {
-    perror("wirte");
-    return 1;
-  }
+  do {
+    if(connect(fd, (struct sockaddr *)&un, len) == -1) {
+      perror("connect");
+      ret = 1;
+      break;
+    }
+
+    if(write(fd, (void*)msg, sizeof(message_t)) != sizeof(message_t)) {
+      perror("wirte");
+      ret = 1;
+      break;
+    }
+
+  } while(0);
 
   free(msg);
-  return 0;
+  return ret;
 }
 
 message_t* pop_msg(const char *socket_path) {
@@ -53,7 +59,6 @@ message_t* pop_msg(const char *socket_path) {
   msg->next = NULL;
 
   int fd;
-  int i, n;
   size_t len;
   struct sockaddr_un un;
 
@@ -63,21 +68,26 @@ message_t* pop_msg(const char *socket_path) {
   un.sun_family = AF_UNIX;
   strcpy(un.sun_path, socket_path);
   len = offsetof(struct sockaddr_un, sun_path) + strlen(socket_path);
-  if (connect(fd, (struct sockaddr *)&un, len) == -1) {
-    perror("connect");
-    return NULL;
-  }
 
-  if(write(fd, (void*)msg, sizeof(message_t)) != sizeof(message_t)) {
-    perror("wirte");
-    return NULL;
-  }
+  do {
+    if (connect(fd, (struct sockaddr *)&un, len) == -1) {
+      perror("connect");
+      break;
+    }
 
-  n = read(fd, (void*)msg, sizeof(message_t));
-  if (n < 0) {
-    perror("read error");
-    return NULL;
-  }
+    if(write(fd, (void*)msg, sizeof(message_t)) != sizeof(message_t)) {
+      perror("wirte");
+      break;
+    }
+
+    int n;
+    n = read(fd, (void*)msg, sizeof(message_t));
+    if (n < 0) {
+      perror("read error");
+      break;
+    }
+
+  } while(0);
 
   return msg;
 

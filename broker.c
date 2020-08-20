@@ -37,7 +37,7 @@ int do_operation(int cfd, message_queue_t *msg_queue, message_t *msg) {
 
 int run_broker(const char *socket_path) {
 
-    int fd, cfd;
+    int fd;
     int i, n;
     size_t len;
     struct sockaddr_un un;
@@ -60,14 +60,18 @@ int run_broker(const char *socket_path) {
       perror("listen");
       return 1;
     }
+
+    message_t *msg;
+
     while(1) {
+
+      int cfd = 0;
 
       if ((cfd = accept(fd, NULL, NULL)) == -1) {
         perror("accept");
         return 1;
       }
 
-      message_t *msg;
 
       while(1) {
         msg = (message_t*)malloc(sizeof(message_t));
@@ -88,7 +92,6 @@ int run_broker(const char *socket_path) {
       //}
       //printf("\n");
       close(cfd);
-      cfd = 0;
     }
 
     return 0;
